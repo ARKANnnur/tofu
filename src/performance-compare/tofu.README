@@ -1,0 +1,154 @@
+
+gsap.to(tofu.mesh.scale, {
+	x: 50,
+	y: 50,
+	scrollTrigger: {
+		trigger: '.tofu-canvas-trigger',
+		start: 'top top',
+		end: '+=100%',
+		scrub: 1,
+		pin: false,
+		markers: true,
+		onUpdate: () => console.log('scale')
+	}
+});
+const proxy = { x: camera.position.x };
+gsap.to(proxy, {
+	x: 0,
+	scrollTrigger: {
+		trigger: '.tofu-canvas-trigger',
+		start: 'top top',
+		end: '+=200%',
+		scrub: 1,
+		pin: false,
+		markers: true,
+		onUpdate: () => {
+			camera.position.x = proxy.x;
+			console.log(camera.position);
+		}
+	}
+});
+gsap.to(canvas.style, {
+	zIndex: 99999,
+	scrollTrigger: {
+		trigger: '.tofu-canvas-trigger',
+		start: 'top top',
+		end: '+=200%',
+		scrub: 1,
+		pin: false,
+		markers: true,
+		onUpdate: () => console.log(canvas.style.zIndex)
+	}
+});
+
+ScrollTrigger.create({
+	trigger: '.tofu-canvas-trigger',
+	start: 'top top',
+	end: '+=100%',
+	scrub: 1,
+	pin: true,
+	markers: true,
+	onUpdate: (self) => {
+		proxy.progress = self.progress;
+
+		tofuGroupBox.forEach((tofuInstance, i) => {
+			// Ensure transparency is enabled for the material (though it should be from the Shape class now)
+			if (tofuInstance.mesh.material && !tofuInstance.mesh.material.transparent) {
+				tofuInstance.mesh.material.transparent = true;
+			}
+
+			gsap.set(tofuInstance.mesh.material, {
+				opacity: gsap.utils.interpolate(1, 0, proxy.progress),
+				duration: i === 0 ? 0.5 : 0.1,
+				ease: 'none'
+			});
+		});
+
+		// Animasi scale dengan GSAP
+		gsap.to(tofu.mesh.scale, {
+			x: gsap.utils.interpolate(1, 50, proxy.progress),
+			y: gsap.utils.interpolate(1, 50, proxy.progress),
+			duration: 0.1,
+			ease: 'none'
+		});
+
+		// Animasi posisi kamera dengan GSAP
+		gsap.to(camera.position, {
+			x: gsap.utils.interpolate(initialCamPosition.x, 0, proxy.progress),
+			y: gsap.utils.interpolate(initialCamPosition.y, 0, proxy.progress),
+			z: gsap.utils.interpolate(initialCamPosition.z, 4, proxy.progress),
+			duration: 0.1,
+			ease: 'none',
+			onUpdate: () => {
+				camera.lookAt(0, 0, 0);
+				camera.updateProjectionMatrix();
+			}
+		});
+
+		gsap.to(self.spacer, {
+			zIndex: gsap.utils.interpolate(15, 50, proxy.progress)
+		});
+	}
+});
+
+
+ScrollTrigger.create({
+	trigger: '.tofu-canvas-trigger',
+	start: 'top top',
+	end: '+=100%',
+	scrub: 1,
+	pin: true,
+	markers: true,
+	onUpdate: (self) => {
+		const progress = self.progress; // Use a local const for efficiency
+
+		// Opacity Animation for Tofus
+		tofuGroupBox.forEach((tofuInstance, i) => {
+			let targetOpacity;
+			if (i === 0) {
+				// Main 'tofu' (index 0)
+				targetOpacity = gsap.utils.interpolate(1, 0, progress);
+			} else {
+				// Other tofus
+				// Remap progress [0.5, 1] to opacity [1, 0]
+				let remappedProgress = gsap.utils.mapRange(0.5, 1, 1, 0, progress);
+				targetOpacity = gsap.utils.clamp(0, 1, remappedProgress);
+			}
+
+			// Directly set opacity. Since `scrub: 1` drives the progress smoothly,
+			// GSAP's internal interpolation for `gsap.to` isn't strictly necessary here.
+			// Using `gsap.set` or direct assignment can be marginally more efficient.
+			if (tofuInstance.mesh.material) {
+				// Safety check
+				tofuInstance.mesh.material.opacity = targetOpacity;
+			}
+		});
+
+		// Scale Animation (Original 'tofu' only)
+		if (tofu.mesh.scale) {
+			// Safety check
+			tofu.mesh.scale.x = gsap.utils.interpolate(1, 50, progress);
+			tofu.mesh.scale.y = gsap.utils.interpolate(1, 50, progress);
+		}
+
+		// Camera Position Animation
+		if (camera.position) {
+			// Safety check
+			camera.position.x = gsap.utils.interpolate(initialCamPosition.x, 0, progress);
+			camera.position.y = gsap.utils.interpolate(initialCamPosition.y, 0, progress);
+			camera.position.z = gsap.utils.interpolate(initialCamPosition.z, 4, progress);
+			camera.lookAt(0, 0, 0); // Always look at center
+			camera.updateProjectionMatrix(); // Important for camera changes
+		}
+
+		// Z-Index for pin-spacer
+		if (self.spacer) {
+			// Using a threshold for z-index, which is more effective than interpolating integers
+			if (progress > 0.05) {
+				gsap.set(self.spacer, { zIndex: 99999 });
+			} else {
+				gsap.set(self.spacer, { zIndex: 10 });
+			}
+		}
+	}
+}); // more light but not smooth

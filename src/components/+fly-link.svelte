@@ -27,7 +27,7 @@
 		];
 
 		function draw() {
-			ctx.fillStyle = '#FFF4D2';
+			ctx.fillStyle = "#fff4d2";
 			ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
 			// Gambar oval sesuai urutan lapisan

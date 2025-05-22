@@ -7,7 +7,7 @@
 	import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 	import gsap from 'gsap';
 	import * as CANNON from 'cannon-es';
-	import { Shape } from '../utils/shapebuild';
+	import { Shape } from '../utils/shape-build';
 
 	let canvas;
 

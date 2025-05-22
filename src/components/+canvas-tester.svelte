@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import * as THREE from 'three';
 	import gsap from 'gsap';
-	import { Shape } from '../utils/tester';
+	import { Shape } from '../utils/shape-build';
 
 	let canvas;
 
@@ -19,8 +19,7 @@
 			0.1,
 			1000
 		);
-		// scene.background = new THREE.Color(0xfff4d2);
-		scene.background = new THREE.Color(0xfff4);
+		scene.background = new THREE.Color(0xfff4d2);
 		const renderer = new THREE.WebGLRenderer({
 			canvas,
 			antialias: true
@@ -57,7 +56,9 @@
 			color: 0xafa,
 			x: 3,
 			y: 2,
-			z: 0
+			z: 0,
+			transparent: true,
+			opacity: 1
 		});
 
 		const tofu1 = new Shape({
@@ -67,7 +68,9 @@
 			x: -5,
 			y: 2,
 			z: -5,
-			rotation: { x: 10, y: 30, z: 10 }
+			rotation: { x: 10, y: 30, z: 10 },
+			transparent: true,
+			opacity: 1
 		});
 
 		const tofu2 = new Shape({
@@ -77,7 +80,9 @@
 			x: -5,
 			y: 2,
 			z: -25,
-			rotation: { x: -20, y: -30, z: 10 }
+			rotation: { x: -20, y: -30, z: 10 },
+			transparent: true,
+			opacity: 1
 		});
 
 		const tofu3 = new Shape({
@@ -87,7 +92,9 @@
 			x: 4,
 			y: 2,
 			z: -10,
-			rotation: { x: 0, y: -5, z: -20 }
+			rotation: { x: 0, y: -5, z: -20 },
+			transparent: true,
+			opacity: 1
 		});
 
 		// Add to group
@@ -129,8 +136,10 @@
 			progress: 0,
 			cameraX: initialCamPosition.x,
 			scale: 1,
-			zIndex: 0
+			zIndex: 10
 		};
+
+		let completedTweens = 0;
 
 		ScrollTrigger.create({
 			trigger: '.tofu-canvas-trigger',
@@ -140,78 +149,53 @@
 			pin: true,
 			markers: true,
 			onUpdate: (self) => {
-				proxy.progress = self.progress;
+				const p = self.progress;
+				proxy.progress = p;
 
-				// Animasi scale dengan GSAP
-				gsap.to(tofu.mesh.scale, {
-					x: gsap.utils.interpolate(1, 50, proxy.progress),
-					y: gsap.utils.interpolate(1, 50, proxy.progress),
-					duration: 0.1
+				tofuGroupBox.forEach((tofuInstance, i) => {
+					const mat = tofuInstance.mesh.material;
+					if (mat && !mat.transparent) mat.transparent = true;
+
+					gsap.set(mat, {
+						opacity: gsap.utils.interpolate(1, 0, p),
+						delay: i * 0.05,
+						ease: 'none'
+					});
 				});
 
-				// Animasi posisi kamera dengan GSAP
-				gsap.to(camera.position, {
-					x: gsap.utils.interpolate(initialCamPosition.x, 0, proxy.progress),
-					y: gsap.utils.interpolate(initialCamPosition.y, 0, proxy.progress),
-					z: gsap.utils.interpolate(initialCamPosition.z, 4, proxy.progress),
+				gsap.set(tofu.mesh.scale, {
+					x: gsap.utils.interpolate(1, 50, p),
+					y: gsap.utils.interpolate(1, 50, p),
+					ease: 'none'
+				});
+
+				gsap.set(camera.position, {
+					x: gsap.utils.interpolate(initialCamPosition.x, 0, p),
+					y: gsap.utils.interpolate(initialCamPosition.y, 0, p),
+					z: gsap.utils.interpolate(initialCamPosition.z, 4, p),
+					ease: 'none'
+				});
+
+				camera.lookAt(0, 0, 0);
+				camera.updateProjectionMatrix();
+
+				gsap.set(self.spacer, {
+					zIndex: gsap.utils.interpolate(5, 20, p),
 					duration: 0.1,
-					onUpdate: () => {
-						camera.lookAt(0, 0, 0);
-						camera.updateProjectionMatrix();
-					}
+					ease: 'none'
 				});
-				const pos = document.getElementsByClassName('position-index')
-				console.log(pos.style.zIndex);
 
-				// Update z-index
-				gsap.to('.position-index', {
-					zIndex: gsap.utils.interpolate(0, 99999, proxy.progress)
-				});
-				// canvas.style.z = Math.floor(gsap.utils.interpolate(0, 99999, proxy.progress));
+				let spacerOpacity;
+				console.log('Progress:', p);
+				// Map the progress from [0.8, 1] to opacity [1, 0]
+				spacerOpacity = gsap.utils.mapRange(0.8, 1, 1, 0, p);
+				spacerOpacity = gsap.utils.clamp(0, 1, spacerOpacity); // Clamp to ensure valid range
+
+				// Apply opacity directly to the spacer's style
+				self.spacer.style.opacity = spacerOpacity;
 			}
 		});
 
-		// gsap.to(tofu.mesh.scale, {
-		// 	x: 50,
-		// 	y: 50,
-		// 	scrollTrigger: {
-		// 		trigger: '.tofu-canvas-trigger',
-		// 		start: 'top top',
-		// 		end: '+=100%',
-		// 		scrub: 1,
-		// 		pin: false,
-		// 		markers: true,
-		// 		onUpdate: () => console.log('scale')
-		// 	}
-		// });
-		// const proxy = { x: camera.position.x };
-		// gsap.to(proxy, {
-		// 	x: 0,
-		// 	scrollTrigger: {
-		// 		trigger: '.tofu-canvas-trigger',
-		// 		start: 'top top',
-		// 		end: '+=200%',
-		// 		scrub: 1,
-		// 		pin: false,
-		// 		markers: true,
-		// 		onUpdate: () => {
-		// 			camera.position.x = proxy.x;
-		// 			console.log(camera.position);
-		// 		}
-		// 	}
-		// });
-		// gsap.to(canvas.style, {
-		// 	zIndex: 99999,
-		// 	scrollTrigger: {
-		// 		trigger: '.tofu-canvas-trigger',
-		// 		start: 'top top',
-		// 		end: '+=200%',
-		// 		scrub: 1,
-		// 		pin: false,
-		// 		markers: true,
-		// 		onUpdate: () => console.log(canvas.style.zIndex)
-		// 	}
-		// });
 		ScrollTrigger.refresh();
 
 		// Drag mechanics
