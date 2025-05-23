@@ -348,7 +348,6 @@
 
 		function animate() {
 			requestAnimationFrame(animate);
-			camera.updateProjectionMatrix();
 			renderer.render(scene, camera);
 		}
 		animate();
