@@ -186,7 +186,7 @@
 				});
 
 				let spacerOpacity;
-				console.log('Progress:', p);
+				// console.log('Progress:', p);
 				// Map the progress from [0.8, 1] to opacity [1, 0]
 				spacerOpacity = gsap.utils.mapRange(0.8, 1, 1, 0, p);
 				spacerOpacity = gsap.utils.clamp(0, 1, spacerOpacity); // Clamp to ensure valid range

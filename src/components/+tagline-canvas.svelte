@@ -27,7 +27,7 @@
 		});
 
 		renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-		// renderer.shadowMap.enabled = true; // Aktifkan jika menggunakan bayangan
+		// renderer.shadowMap.enabled = true; // activate shadows if needed
 		// renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 		const initialCamPosition = {
 			x: 0,
@@ -35,13 +35,13 @@
 			z: 5
 		};
 		camera.position.set(initialCamPosition.x, initialCamPosition.y, initialCamPosition.z);
-		camera.lookAt(0, 2, 0);
+		const cameraLookAtTarget = new THREE.Vector3(0, 0, 0);
+		camera.lookAt(cameraLookAtTarget);
 
 		// Light
 		const light = new THREE.DirectionalLight(0xffffff, 1);
 		light.position.set(10, 20, 10);
-		// light.castShadow = true; // Aktifkan jika ingin tahu menghasilkan bayangan
-		// Atur properti bayangan jika castShadow = true
+		// light.castShadow = true;
 		// light.shadow.mapSize.width = 1024;
 		// light.shadow.mapSize.height = 1024;
 		// light.shadow.camera.left = -20;
@@ -54,28 +54,28 @@
 		scene.add(ambientLight);
 
 		// Parameters for Tofu
-		const NUM_TOFUS = 24;
+		const NUM_TOFUS = 50;
 		const tofuSize = { w: 3, h: 2, d: 3 };
 		const tofuColor = 0xffffaa; // Warna tahu
 
 		// Create common geometry and material for all tofus
 		const tofuGeometry = new THREE.BoxGeometry(tofuSize.w, tofuSize.h, tofuSize.d);
-		const tofuMaterial = new THREE.MeshStandardMaterial({ color: tofuColor }); // Gunakan MeshStandardMaterial untuk bereaksi terhadap cahaya
+		const tofuMaterial = new THREE.MeshStandardMaterial({ color: tofuColor }); // Use MeshStandardMaterial to react to light
 
 		// Create InstancedMesh
 		const tofuInstances = new THREE.InstancedMesh(tofuGeometry, tofuMaterial, NUM_TOFUS);
-		// tofuInstances.castShadow = true; // Jika tahu menghasilkan bayangan
-		// tofuInstances.receiveShadow = true; // Jika tahu menerima bayangan
+		// tofuInstances.castShadow = true; // If you know, it produces a shadow
+		// tofuInstances.receiveShadow = true; // If you know, it receives shadows
 		scene.add(tofuInstances);
 
 		const spawnRange = {
-			x: { min: -15, max: 15 },
-			y: { min: -15, max: 10 },
-			z: { min: -45, max: -15 }
+			x: { min: -30, max: 30 },
+			y: { min: -30, max: 30 },
+			z: { min: -55, max: -5 }
 		};
 
 		const usedPositions = [];
-		const minDistance = 10;
+		const minDistance = 15;
 
 		function generateNonOverlappingPosition() {
 			let tries = 0;
@@ -85,6 +85,7 @@
 					Math.random() * (spawnRange.y.max - spawnRange.y.min) + spawnRange.y.min,
 					Math.random() * (spawnRange.z.max - spawnRange.z.min) + spawnRange.z.min
 				);
+
 				const isTooClose = usedPositions.some((p) => p.distanceTo(pos) < minDistance);
 				if (!isTooClose) {
 					usedPositions.push(pos);
@@ -92,8 +93,15 @@
 				}
 				tries++;
 			}
-			console.warn('Could not find non-overlapping position, using fallback.');
-			return new THREE.Vector3(0, 0, 0); // Fallback
+
+			console.warn('Could not find non-overlapping position, using safe fallback.');
+			const fallback = new THREE.Vector3(
+				Math.random() * (spawnRange.x.max - spawnRange.x.min) + spawnRange.x.min,
+				Math.random() * (spawnRange.y.max - spawnRange.y.min) + spawnRange.y.min,
+				spawnRange.z.max // Forced in the back of the spawn range
+			);
+			usedPositions.push(fallback);
+			return fallback;
 		}
 
 		// Store data for each instance (original position, current animated position, initial rotation)
@@ -101,69 +109,173 @@
 		const dummy = new THREE.Object3D(); // Helper object for matrix calculation
 
 		for (let i = 0; i < NUM_TOFUS; i++) {
-			const position = generateNonOverlappingPosition();
-			const randomRotationEuler = new THREE.Euler(
-				THREE.MathUtils.degToRad(Math.random() * 360),
-				THREE.MathUtils.degToRad(Math.random() * 360),
-				THREE.MathUtils.degToRad(Math.random() * 360)
-			);
-			const quaternion = new THREE.Quaternion().setFromEuler(randomRotationEuler);
+			const center = generateNonOverlappingPosition();
+			const radius = 1 + Math.random() * 2;
+			const angle = Math.random() * Math.PI * 2;
+			const orbitSpeed = 0.01 + Math.random() * 0.02;
 
 			instanceData[i] = {
-				originalPosition: position.clone(),
-				animatedPosition: position.clone(), // GSAP will animate this
-				initialRotation: quaternion.clone()
+				center: center.clone(),
+				radius: radius,
+				orbitAngle: angle,
+				orbitSpeed: orbitSpeed,
+				initialRotation: new THREE.Quaternion().setFromEuler(
+					new THREE.Euler(
+						THREE.MathUtils.degToRad(Math.random() * 360),
+						THREE.MathUtils.degToRad(Math.random() * 360),
+						THREE.MathUtils.degToRad(Math.random() * 360)
+					)
+				)
 			};
 
-			// Set initial matrix for the instance
-			dummy.position.copy(instanceData[i].animatedPosition);
+			const position = getOrbitPosition(center, radius, angle);
+			dummy.position.copy(position);
 			dummy.quaternion.copy(instanceData[i].initialRotation);
 			dummy.updateMatrix();
 			tofuInstances.setMatrixAt(i, dummy.matrix);
 		}
 		tofuInstances.instanceMatrix.needsUpdate = true;
 
-		// Fungsi untuk menghasilkan offset acak dari posisi dasar
-		function getRandomOffset(basePositionVec3, range = 0.8) {
+		// Function to produce random offset from the base position
+		function getOrbitPosition(center, radius, angle) {
 			return new THREE.Vector3(
-				basePositionVec3.x + (Math.random() - 0.5) * range * 2,
-				basePositionVec3.y + (Math.random() - 0.5) * range * 2,
-				basePositionVec3.z + (Math.random() - 0.5) * range * 2
+				center.x + radius * Math.cos(angle),
+				center.y + radius * Math.sin(angle),
+				center.z
 			);
 		}
 
-		// Fungsi untuk memulai animasi acak untuk sebuah instance
-		function startInstanceAnimation(index) {
-			const data = instanceData[index];
-			const targetPos = getRandomOffset(data.originalPosition, 0.8);
+		// --- Beginning Implementation of Camera Movement with Mouse ---
+		const cameraMouseInfluence = {
+			x: { current: 0, target: 0, ease: 0.1, sensitivity: 35 },
+			y: { current: 0, target: 0, ease: 0.1, sensitivity: 9 },
+			z: { current: 5, target: 0, ease: 0.1, sensitivity: 35 }
+		};
 
-			gsap.to(data.animatedPosition, {
-				// Animate the 'animatedPosition' Vector3
-				x: targetPos.x,
-				y: targetPos.y,
-				z: targetPos.z,
-				duration: 1.5 + Math.random() * 0.5,
-				ease: 'sine.inOut',
-				onUpdate: () => {
-					dummy.position.copy(data.animatedPosition);
-					dummy.quaternion.copy(data.initialRotation); // Rotation remains constant during this position animation
-					dummy.updateMatrix();
-					tofuInstances.setMatrixAt(index, dummy.matrix);
-					tofuInstances.instanceMatrix.needsUpdate = true; // Signal Three.js to update the instance matrix
-				},
-				onComplete: () => {
-					startInstanceAnimation(index); // Loop animation
-				}
+		// Mouse tracking
+		let mouseX = 0;
+		let mouseY = 0;
+		const TRACKING_OFFSET = 0.25; // 25% The upper part is ignored
+		const TRACKING_HEIGHT = 1 - TRACKING_OFFSET;
+
+		const onMouseMove = (event) => {
+			if (!canvas) return;
+			const rect = canvas.getBoundingClientRect();
+			const y = (event.clientY - rect.top) / rect.height;
+			const nx = (event.clientX / canvas.clientWidth - 0.5) * 2;
+			// Y tracking only the lower 75% area (25% offset from the top)
+			let normalizedY = (y - TRACKING_OFFSET) / TRACKING_HEIGHT;
+			normalizedY = Math.max(0, Math.min(1, normalizedY));
+
+			mouseX = nx;
+			mouseY = (0.5 - normalizedY) * 2;
+		};
+		window.addEventListener('mousemove', onMouseMove);
+		// --- END IMPLEMENTATION OF CAMERA MOVEMENT WITH MOUSE ---
+
+		const loader = new FontLoader();
+
+		loader.load('/node_modules/three/examples/fonts/helvetiker_bold.typeface.json', (font) => {
+			const words = ['Creamy', 'Soft', 'Silken', 'Protein Rich', 'Delicious', 'Plant Based'];
+			const textMaterial = new THREE.MeshStandardMaterial({ color: 0x252525 });
+			const positions = [
+				new THREE.Vector3(0, 0, 0),
+				new THREE.Vector3(-15, 5, -20),
+				new THREE.Vector3(20, 10, -15),
+				new THREE.Vector3(-3, -10, -20),
+				new THREE.Vector3(-20, -20, -40),
+				new THREE.Vector3(25, -20, -40)
+			];
+			words.forEach((word, i) => {
+				const textGeometry = new TextGeometry(word, {
+					font,
+					size: 2,
+					height: 0.5,
+					depth: 0.5,
+					curveSegments: 12,
+					bevelEnabled: false,
+					bevelSize: 0.02,
+					bevelThickness: 0.03,
+					bevelOffset: 0,
+					bevelSegments: 4
+				});
+				textGeometry.computeVertexNormals(); // Prevent transparency
+				const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+				textMesh.position.copy(positions[i]);
+				scene.add(textMesh);
 			});
-		}
+		});
 
-		// Mulai animasi untuk setiap instance
-		for (let i = 0; i < NUM_TOFUS; i++) {
-			startInstanceAnimation(i);
-		}
+		// ScrollTrigger.create({
+		// 	trigger: canvas,
+		// 	start: 'top top',
+		// 	end: '+=200%',
+		// 	scrub: 1,
+		// 	pin: true,
+		// 	markers: true,
+		// 	onUpdate: (self) => {
+		// 		const targetZ = gsap.utils.interpolate(5, -100, self.progress);
+		// 		camera.position.z = targetZ;
+		// 		camera.updateProjectionMatrix();
+
+		// 		gsap.set(self.spacer, {
+		// 			zIndex: gsap.utils.interpolate(5, 20, self.progress),
+		// 			duration: 0.1,
+		// 			ease: 'none'
+		// 		});
+
+		// 		let spacerOpacity;
+		// 		// console.log('Progress:', p);
+		// 		// Map the progress from [0.8, 1] to opacity [1, 0]
+		// 		spacerOpacity = gsap.utils.mapRange(0.8, 1, 1, 0, self.progress);
+		// 		spacerOpacity = gsap.utils.clamp(0, 1, spacerOpacity); // Clamp to ensure valid range
+
+		// 		// Apply opacity directly to the spacer's style
+		// 		self.spacer.style.opacity = spacerOpacity;
+		// 	}
+		// });
+
+		// ScrollTrigger.refresh();
 
 		function animate() {
 			requestAnimationFrame(animate);
+			for (let i = 0; i < NUM_TOFUS; i++) {
+				const data = instanceData[i];
+				data.orbitAngle += data.orbitSpeed;
+
+				const position = getOrbitPosition(data.center, data.radius, data.orbitAngle);
+				dummy.position.copy(position);
+				dummy.quaternion.copy(data.initialRotation);
+				dummy.updateMatrix();
+				tofuInstances.setMatrixAt(i, dummy.matrix);
+			}
+			tofuInstances.instanceMatrix.needsUpdate = true;
+
+			cameraMouseInfluence.x.current = gsap.utils.interpolate(
+				cameraMouseInfluence.x.current,
+				cameraMouseInfluence.x.target + mouseX,
+				cameraMouseInfluence.x.ease
+			);
+
+			cameraMouseInfluence.y.current = gsap.utils.interpolate(
+				cameraMouseInfluence.y.current,
+				cameraMouseInfluence.y.target + mouseY,
+				cameraMouseInfluence.y.ease
+			);
+
+			// New z calculation based on distance from (0, 0)
+			const distance = Math.sqrt(mouseX * mouseX + mouseY * mouseY); // Euclidean distance
+			const zBase = 5; // Minimum z value when x or y = 0
+			cameraMouseInfluence.z.current = gsap.utils.interpolate(
+				cameraMouseInfluence.z.current,
+				zBase + distance * cameraMouseInfluence.z.sensitivity,
+				cameraMouseInfluence.z.ease
+			);
+
+			camera.position.x = cameraMouseInfluence.x.current * cameraMouseInfluence.x.sensitivity;
+			camera.position.y = cameraMouseInfluence.y.current * cameraMouseInfluence.y.sensitivity;
+			camera.position.z = cameraMouseInfluence.z.current;
+			camera.lookAt(-camera.position.x, -camera.position.y, -camera.position.z);
 			renderer.render(scene, camera);
 		}
 		animate();
@@ -180,34 +292,11 @@
 		};
 		window.addEventListener('resize', handleResize);
 
-		const loader = new FontLoader();
-
-		loader.load(
-			'https://codepen-alva.s3.eu-west-2.amazonaws.com/helvetiker_regular.typeface.json',
-			function (font) {
-				const textGeometry = new TextGeometry('Halo Dunia!', {
-					font,
-					size: 0.5,
-					height: 0.4,
-					curveSegments: 12,
-					bevelEnabled: true,
-					bevelSize: 0.02,
-					bevelThickness: 0.03,
-					bevelOffset: 0,
-					bevelSegments: 4
-				});
-
-				const textMaterial = new THREE.MeshStandardMaterial({ color: 0x252525 });
-				const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-				textMesh.position.set(0, 0, -50);
-				scene.add(textMesh);
-			}
-		);
-
 		// Cleanup
 		return () => {
 			ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
 			window.removeEventListener('resize', handleResize);
+			window.removeEventListener('mousemove', onMouseMove);
 			tofuGeometry.dispose();
 			tofuMaterial.dispose();
 			// Stop all GSAP animations that may still be running
@@ -216,4 +305,4 @@
 	});
 </script>
 
-<canvas bind:this={canvas} class="h-full w-full"></canvas>
+<canvas bind:this={canvas} class="h-full w-full text-sm"></canvas>

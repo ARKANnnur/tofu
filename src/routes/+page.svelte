@@ -1,5 +1,6 @@
 <script>
-	import Tagline from '../features/+tagline.svelte';
+	import Product from '../features/+product.svelte';
+import Tagline from '../features/+tagline.svelte';
 	import Tofu from '../features/+tofu.svelte';
 </script>
 
@@ -10,6 +11,7 @@
 
 <Tofu />
 <Tagline />
+<Product />
 
 <style lang="postcss">
 	@reference "tailwindcss";
