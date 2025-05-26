@@ -54,7 +54,7 @@
 		scene.add(ambientLight);
 
 		// Parameters for Tofu
-		const NUM_TOFUS = 50;
+		const NUM_TOFUS = 80;
 		const tofuSize = { w: 3, h: 2, d: 3 };
 		const tofuColor = 0xffffaa; // Warna tahu
 
@@ -69,9 +69,9 @@
 		scene.add(tofuInstances);
 
 		const spawnRange = {
-			x: { min: -30, max: 30 },
-			y: { min: -30, max: 30 },
-			z: { min: -55, max: -5 }
+			x: { min: -40, max: 40 },
+			y: { min: -40, max: 40 },
+			z: { min: -60, max: -5 }
 		};
 
 		const usedPositions = [];
@@ -152,6 +152,8 @@
 			z: { current: 5, target: 0, ease: 0.1, sensitivity: 35 }
 		};
 
+		let trigger = false;
+
 		// Mouse tracking
 		let mouseX = 0;
 		let mouseY = 0;
@@ -206,36 +208,33 @@
 			});
 		});
 
-		// ScrollTrigger.create({
-		// 	trigger: canvas,
-		// 	start: 'top top',
-		// 	end: '+=200%',
-		// 	scrub: 1,
-		// 	pin: true,
-		// 	markers: true,
-		// 	onUpdate: (self) => {
-		// 		const targetZ = gsap.utils.interpolate(5, -100, self.progress);
-		// 		camera.position.z = targetZ;
-		// 		camera.updateProjectionMatrix();
+		ScrollTrigger.create({
+			trigger: '.pin-tagline',
+			start: '50% top',
+			end: '+=100%',
+			pin: true,
+			scrub: 1,
+			markers: true,
+			onUpdate: (self) => {
+				let spacerOpacity;
+				trigger = self.progress > 0.1; // Check if the progress is greater than 0.1
+				// console.log('Progress:', p);
+				spacerOpacity = gsap.utils.mapRange(0, 1, 1, 0, self.progress);
+				spacerOpacity = gsap.utils.clamp(0, 1, spacerOpacity); // Clamp to ensure valid range
 
-		// 		gsap.set(self.spacer, {
-		// 			zIndex: gsap.utils.interpolate(5, 20, self.progress),
-		// 			duration: 0.1,
-		// 			ease: 'none'
-		// 		});
+				// Apply opacity directly to the spacer's style
+				// self.spacer.style.opacity = spacerOpacity;
 
-		// 		let spacerOpacity;
-		// 		// console.log('Progress:', p);
-		// 		// Map the progress from [0.8, 1] to opacity [1, 0]
-		// 		spacerOpacity = gsap.utils.mapRange(0.8, 1, 1, 0, self.progress);
-		// 		spacerOpacity = gsap.utils.clamp(0, 1, spacerOpacity); // Clamp to ensure valid range
+				gsap.set(camera.position, {
+					z: gsap.utils.interpolate(cameraMouseInfluence.z.current, -50, self.progress),
+					ease: 'none'
+				});
 
-		// 		// Apply opacity directly to the spacer's style
-		// 		self.spacer.style.opacity = spacerOpacity;
-		// 	}
-		// });
+				camera.updateProjectionMatrix();
+			}
+		});
 
-		// ScrollTrigger.refresh();
+		ScrollTrigger.refresh();
 
 		function animate() {
 			requestAnimationFrame(animate);
@@ -251,31 +250,33 @@
 			}
 			tofuInstances.instanceMatrix.needsUpdate = true;
 
-			cameraMouseInfluence.x.current = gsap.utils.interpolate(
-				cameraMouseInfluence.x.current,
-				cameraMouseInfluence.x.target + mouseX,
-				cameraMouseInfluence.x.ease
-			);
+			if (!trigger) {
+				cameraMouseInfluence.x.current = gsap.utils.interpolate(
+					cameraMouseInfluence.x.current,
+					cameraMouseInfluence.x.target + mouseX,
+					cameraMouseInfluence.x.ease
+				);
 
-			cameraMouseInfluence.y.current = gsap.utils.interpolate(
-				cameraMouseInfluence.y.current,
-				cameraMouseInfluence.y.target + mouseY,
-				cameraMouseInfluence.y.ease
-			);
+				cameraMouseInfluence.y.current = gsap.utils.interpolate(
+					cameraMouseInfluence.y.current,
+					cameraMouseInfluence.y.target + mouseY,
+					cameraMouseInfluence.y.ease
+				);
 
-			// New z calculation based on distance from (0, 0)
-			const distance = Math.sqrt(mouseX * mouseX + mouseY * mouseY); // Euclidean distance
-			const zBase = 5; // Minimum z value when x or y = 0
-			cameraMouseInfluence.z.current = gsap.utils.interpolate(
-				cameraMouseInfluence.z.current,
-				zBase + distance * cameraMouseInfluence.z.sensitivity,
-				cameraMouseInfluence.z.ease
-			);
+				// New z calculation based on distance from (0, 0)
+				const distance = Math.sqrt(mouseX * mouseX + mouseY * mouseY); // Euclidean distance
+				const zBase = 5; // Minimum z value when x or y = 0
+				cameraMouseInfluence.z.current = gsap.utils.interpolate(
+					cameraMouseInfluence.z.current,
+					zBase + distance * cameraMouseInfluence.z.sensitivity,
+					cameraMouseInfluence.z.ease
+				);
 
-			camera.position.x = cameraMouseInfluence.x.current * cameraMouseInfluence.x.sensitivity;
-			camera.position.y = cameraMouseInfluence.y.current * cameraMouseInfluence.y.sensitivity;
-			camera.position.z = cameraMouseInfluence.z.current;
-			camera.lookAt(-camera.position.x, -camera.position.y, -camera.position.z);
+				camera.position.x = cameraMouseInfluence.x.current * cameraMouseInfluence.x.sensitivity;
+				camera.position.y = cameraMouseInfluence.y.current * cameraMouseInfluence.y.sensitivity;
+				camera.position.z = cameraMouseInfluence.z.current;
+				camera.lookAt(-camera.position.x, -camera.position.y, -camera.position.z);
+			}
 			renderer.render(scene, camera);
 		}
 		animate();

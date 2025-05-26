@@ -147,7 +147,7 @@
 			end: '+=100%',
 			scrub: 1,
 			pin: true,
-			markers: true,
+			// markers: true,
 			onUpdate: (self) => {
 				const p = self.progress;
 				proxy.progress = p;
