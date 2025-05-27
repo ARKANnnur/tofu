@@ -211,21 +211,17 @@
 		ScrollTrigger.create({
 			trigger: '.pin-tagline',
 			start: '50% top',
-			end: '+=100%',
+			end: '+=200%',
 			pin: true,
 			scrub: 1,
 			markers: true,
 			onUpdate: (self) => {
 				let spacerOpacity;
 				trigger = self.progress > 0.1; // Check if the progress is greater than 0.1
-				// console.log('Progress:', p);
-				spacerOpacity = gsap.utils.mapRange(0, 1, 1, 0, self.progress);
-				spacerOpacity = gsap.utils.clamp(0, 1, spacerOpacity); // Clamp to ensure valid range
-
-				// Apply opacity directly to the spacer's style
-				// self.spacer.style.opacity = spacerOpacity;
 
 				gsap.set(camera.position, {
+					x: cameraMouseInfluence.x.current,
+					y: cameraMouseInfluence.y.current,
 					z: gsap.utils.interpolate(cameraMouseInfluence.z.current, -50, self.progress),
 					ease: 'none'
 				});
