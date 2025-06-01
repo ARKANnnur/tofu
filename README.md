@@ -1,4 +1,4 @@
-# sv
+# THIS PROJECT WILL CONTINUE IN JULI WAITING FOR ART IMAGE
 
 Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
