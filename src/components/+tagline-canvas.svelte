@@ -213,7 +213,7 @@
 			start: '50% top',
 			end: '+=200%',
 			pin: true,
-			scrub: 1,
+			scrub: 1.5,
 			markers: true,
 			onUpdate: (self) => {
 				let spacerOpacity;

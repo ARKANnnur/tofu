@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import { onMount } from 'svelte';
 	import gsap from 'gsap';
+
 	onMount(async () => {
 		const { ScrollTrigger } = await import('gsap/ScrollTrigger');
 		gsap.registerPlugin(ScrollTrigger);
@@ -13,7 +14,7 @@
 					start: 'top top',
 					end: '+=200%',
 					pin: true,
-					scrub: true,
+					scrub: 1.5,
 					markers: { indent: 300 }
 				}
 			})
@@ -45,10 +46,14 @@
 			.to({}, {});
 
 		ScrollTrigger.refresh();
+
+		return () => {
+			ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
+		};
 	});
 </script>
 
-<section class="section product">
+<section class="product max-w-dvw overflow-hidden">
 	<h1
 		class="text-dark-50 text-1 line-clamp-none text-[15rem] leading-[12rem] font-semibold lg:subpixel-antialiased"
 	>
@@ -65,20 +70,12 @@
 		PRODUCTS
 	</h1>
 </section>
-<section class="section blue"></section>
 
 <style>
-	.section {
+	.product {
 		width: 100%;
 		height: 100dvh;
 		background-color: #fff4d2;
-	}
-
-	.blue {
-		background-color: blue;
-	}
-
-	.product {
 		margin-top: -150dvh;
 		opacity: 0;
 		visibility: hidden;

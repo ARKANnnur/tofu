@@ -145,7 +145,7 @@
 			trigger: '.tofu-canvas-trigger',
 			start: 'top top',
 			end: '+=100%',
-			scrub: 1,
+			scrub: 1.5,
 			pin: true,
 			// markers: true,
 			onUpdate: (self) => {

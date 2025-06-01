@@ -1,7 +1,9 @@
 <script>
-	import Product from '../features/+product.svelte';
-import Tagline from '../features/+tagline.svelte';
 	import Tofu from '../features/+tofu.svelte';
+	import Tagline from '../features/+tagline.svelte';
+	import Product from '../features/+product.svelte';
+	import ListProducts from '../features/+list-products.svelte';
+	import Priceproducts from '../features/+about-us.svelte';
 </script>
 
 <svelte:head>
@@ -9,13 +11,12 @@ import Tagline from '../features/+tagline.svelte';
 	<meta name="description" content="Svelte demo app" />
 </svelte:head>
 
-<Tofu />
+<!-- <Tofu />
 <Tagline />
 <Product />
+<ListProducts /> -->
+<Priceproducts />
 
 <style lang="postcss">
 	@reference "tailwindcss";
-	:global(html) {
-		background-color: theme(--color-gray-100);
-	}
 </style>
